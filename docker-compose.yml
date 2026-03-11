@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Definimos um serviço chamado "db" (database)
+  db:
+    # 1. Imagem: Baixa a versão oficial do PostgreSQL (versão 16)
+    image: postgres:16
+    container_name: crm_igreja_db
+    
+    # 2. Variáveis de Ambiente: Configura o acesso inicial
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: SenhaSuperSecreta123!
+      POSTGRES_DB: CrmIgrejaDb
+      
+    # 3. Portas: Conecta a porta do seu PC (esquerda) com a porta do Container (direita)
+    ports:
+      - "5432:5432"
+      
+    # 4. Volumes: Cria um "pen drive virtual" para não perder os dados ao reiniciar
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Declaração do volume criado acima
+volumes:
+  postgres_data:
