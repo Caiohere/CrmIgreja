@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration.UserSecrets;
+using CrmIgreja.api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -256,13 +257,8 @@ app.MapPost("auth/refreshToken", async (RefreshRequest req, ApplicationDbContext
 
 app.MapPost("auth/logout", async (ClaimsPrincipal userLogado, ApplicationDbContext db) =>
 {
-    var UserIdString = userLogado.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? userLogado.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+    var userId = userLogado.GetUserId();
 
-    if (!int.TryParse(UserIdString, out int userId))
-    {
-        return Results.Unauthorized();
-    }
     var membro = await db.Membros
         .Include(m => m.Usuario)
         .FirstOrDefaultAsync(m => m.id == userId);
@@ -271,7 +267,6 @@ app.MapPost("auth/logout", async (ClaimsPrincipal userLogado, ApplicationDbConte
     {
         return Results.Unauthorized();
     }
-        
 
     membro.Usuario!.refreshToken = null;
     membro.Usuario.refreshTokenExpiryTime = null;
@@ -281,6 +276,6 @@ app.MapPost("auth/logout", async (ClaimsPrincipal userLogado, ApplicationDbConte
 })
 .RequireAuthorization();
 
-  
+
 
 app.Run();
