@@ -1,17 +1,18 @@
-using Npgsql;
 using CrmIgreja.api.Context;
-using Microsoft.EntityFrameworkCore;
 using CrmIgreja.api.DTO;
+using CrmIgreja.api.Exceptions;
+using CrmIgreja.api.Extensions;
 using CrmIgreja.api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Npgsql;
+using System.IdentityModel.Tokens.Jwt;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Configuration.UserSecrets;
-using CrmIgreja.api.Extensions;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,11 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. SERVICES
 // =====================================================================
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<CrmIgreja.api.Exceptions.GlobalExceptionHandler>();
+
+
 builder.Services.AddSwaggerGen(c =>
 {
     // Define a regra de segurança (O Cadeado)
@@ -95,6 +101,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.UseAuthentication(); // Lê JWT
@@ -109,7 +116,7 @@ app.MapPost("/auth/register", async (RegisterRequest req, ApplicationDbContext d
 {
     if ((req.senha.Length < 8) || (!req.senha.Any(char.IsDigit)) || (!req.senha.Any(char.IsPunctuation)))
     {
-        return Results.BadRequest("A senha precisa ter 8 digitos, contendo ao menos um número e caracter especial");
+        throw new BadHttpRequestException("A senha precisa ter 8 digitos, contendo ao menos um número e caracter especial");
     }
     using var transaction = await db.Database.BeginTransactionAsync();
         
@@ -147,10 +154,10 @@ app.MapPost("/auth/register", async (RegisterRequest req, ApplicationDbContext d
         //Verifica se o erro foi de email duplicado
         if (ex.InnerException?.Message.Contains("23505") == true || ex.InnerException?.Message.Contains("Unique") == true)
         {
-            return Results.Conflict(new { Erro = "Este email já está cadastrado no sistema." });
+            throw new EmailDuplicadoException("Este email já está cadastrado no sistema.");
         }
 
-        return Results.BadRequest(new { Erro = "Não foi possível registrar o usuário." });
+        throw new BadHttpRequestException("Não foi possível registrar o usuário.");
     }
 })
 .WithName("RegisterUser");
@@ -162,13 +169,13 @@ app.MapPost("auth/login", async (LoginRequest req, ApplicationDbContext db, ICon
     .FirstOrDefaultAsync(m => m.email == req.email);
 
     if (membro == null || membro.Usuario == null)
-        return Results.Unauthorized();
+        throw new UnauthorizedAccessException();
 
     var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Usuario>();
     var resultado = hasher.VerifyHashedPassword(membro.Usuario, membro.Usuario.senhaHash, req.senha);
 
     if (resultado == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
-        return Results.Unauthorized();
+        throw new UnauthorizedAccessException();
 
     var tokenHandler = new JwtSecurityTokenHandler();
     var keyBytes = Encoding.UTF8.GetBytes(config["Jwt:Key"]!);
@@ -215,7 +222,7 @@ app.MapPost("auth/refreshToken", async (RefreshRequest req, ApplicationDbContext
 
     if (membro == null || membro.Usuario!.refreshTokenExpiryTime < DateTime.UtcNow) 
     {
-        return Results.Unauthorized();
+        throw new UnauthorizedAccessException();
     };
 
     var tokenHandler = new JwtSecurityTokenHandler();
@@ -265,7 +272,7 @@ app.MapPost("auth/logout", async (ClaimsPrincipal userLogado, ApplicationDbConte
 
     if (membro == null)
     {
-        return Results.Unauthorized();
+        throw new UnauthorizedAccessException();
     }
 
     membro.Usuario!.refreshToken = null;
