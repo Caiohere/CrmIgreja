@@ -11,6 +11,8 @@ namespace CrmIgreja.api.Context
 
         public DbSet<Usuario> Usuarios { get; set; }
 
+        public DbSet<Evento> Evento { get; set; }
+
         //Constraints para as tabelas
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -22,6 +24,9 @@ namespace CrmIgreja.api.Context
             modelBuilder.Entity<Membro>()
                 .HasIndex(m => m.email)
                 .IsUnique();
+
+            modelBuilder.Entity<Evento>()
+                .HasIndex(e => e.dataInicio);
         }
     }
 

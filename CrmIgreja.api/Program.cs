@@ -4,11 +4,11 @@ using CrmIgreja.api.Exceptions;
 using CrmIgreja.api.Extensions;
 using CrmIgreja.api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
-using System.IdentityModel.Tokens.Jwt;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -283,6 +283,71 @@ app.MapPost("auth/logout", async (ClaimsPrincipal userLogado, ApplicationDbConte
 })
 .RequireAuthorization();
 
+app.MapPost("evento", async (CriarEventoRequest req, ApplicationDbContext db) =>
+{
 
+    if (req.dataInicio < DateTimeOffset.UtcNow) 
+    {
+        throw new ArgumentException("Não é possível criar um agendamento em data passada");
+    }
+
+    if (req.dataFim < req.dataInicio) 
+    {
+        throw new ArgumentException("Data final não pode ser menor que data inicial");
+    }
+
+    var novoEvento = new Evento
+    {
+        nome = req.nome,
+        descricao = req.descricao,
+        dataInicio = req.dataInicio,
+        dataFim = req.dataFim
+    };
+
+    db.Evento.Add(novoEvento);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/eventos/{novoEvento.id}", novoEvento);
+});
+
+
+app.MapGet("evento/", async (DateTimeOffset? dataInicio, DateTimeOffset? dataFim, ApplicationDbContext db) => 
+{
+    var query = db.Evento.AsQueryable();
+
+    if (dataInicio.HasValue) 
+    {
+        query = query.Where(e => e.dataInicio >= dataInicio);
+    }
+
+    if (dataFim.HasValue)
+    {
+        query = query.Where(e => e.dataFim <= dataFim);
+    }
+
+    var eventos = await query
+           .OrderBy(e => e.dataInicio)
+           .ToListAsync();
+
+    return Results.Ok(eventos);
+});
+
+app.MapDelete("/evento/{id}", [Authorize(Roles = "Admin")] async(int id, ApplicationDbContext db) =>
+{
+
+    var linhasAfetadas = await db.Evento
+        .Where(e => e.id == id)
+        .ExecuteDeleteAsync();
+
+
+    if (linhasAfetadas == 0)
+    {
+        return Results.NotFound(new {Erro = "Registro não encontrado"});
+    }
+
+    return Results.NoContent();
+
+})
+.RequireAuthorization();
 
 app.Run();
