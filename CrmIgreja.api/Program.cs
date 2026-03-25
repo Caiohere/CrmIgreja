@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using System.Data.Common;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -310,8 +311,7 @@ app.MapPost("evento", async (CriarEventoRequest req, ApplicationDbContext db) =>
     return Results.Created($"/eventos/{novoEvento.id}", novoEvento);
 });
 
-
-app.MapGet("evento/", async (DateTimeOffset? dataInicio, DateTimeOffset? dataFim, ApplicationDbContext db) => 
+app.MapGet("eventos", async (DateTimeOffset? dataInicio, DateTimeOffset? dataFim, ApplicationDbContext db) => 
 {
     var query = db.Evento.AsQueryable();
 
@@ -346,6 +346,74 @@ app.MapDelete("/evento/{id}", [Authorize(Roles = "Admin")] async(int id, Applica
     }
 
     return Results.NoContent();
+
+})
+.RequireAuthorization();
+
+app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] async (int eventId, ApplicationDbContext db) =>
+{
+    var existeEvento = await db.Evento.AnyAsync(e => e.id == eventId);
+    if (!existeEvento)
+    {
+        return Results.NotFound(new { Erro = "Evento não encontrado para gerar o token" });
+    }
+
+    var existeToken = await db.EventoToken.FirstOrDefaultAsync(t => t.eventoId == eventId);
+
+    if (existeToken != null && !existeToken.isRevogado)
+    {
+        existeToken.CriadoEm = DateTimeOffset.UtcNow;
+        existeToken.ExpiraEm = DateTimeOffset.UtcNow.AddMinutes(15);
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new
+        {
+            Mensagem = "Token renovado com sucesso",
+            Token = existeToken.tokenHash
+        });
+    }
+
+    var randomNumber = new byte[32];
+    using var rng = RandomNumberGenerator.Create();
+    rng.GetBytes(randomNumber);
+    var eventToken = Convert.ToBase64String(randomNumber);
+
+    
+    if (existeToken != null && existeToken.isRevogado) // está inválido, cria um novo
+    {
+        existeToken.CriadoEm = DateTimeOffset.UtcNow;
+        existeToken.ExpiraEm = DateTimeOffset.UtcNow.AddMinutes(15);
+        existeToken.tokenHash = eventToken;
+        existeToken.isRevogado = false;
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new
+        {
+            Mensagem = "Novo Token criado com sucesso",
+            Token = eventToken
+        });
+    }
+    
+    var novoEventToken = new EventoToken
+    {
+        eventoId = eventId,
+        CriadoEm = DateTimeOffset.UtcNow,
+        ExpiraEm = DateTimeOffset.UtcNow.AddMinutes(15),
+        tokenHash = eventToken,
+        isRevogado = false
+    };
+
+    db.EventoToken.Add(novoEventToken);
+    await db.SaveChangesAsync();
+
+
+    return Results.Ok(new
+    {
+        Mensagem = "Token criado com sucesso",
+        Token = eventToken
+    });
 
 })
 .RequireAuthorization();

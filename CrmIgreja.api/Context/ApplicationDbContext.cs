@@ -13,6 +13,8 @@ namespace CrmIgreja.api.Context
 
         public DbSet<Evento> Evento { get; set; }
 
+        public DbSet<EventoToken> EventoToken {get; set;}
+
         //Constraints para as tabelas
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +29,10 @@ namespace CrmIgreja.api.Context
 
             modelBuilder.Entity<Evento>()
                 .HasIndex(e => e.dataInicio);
+
+            modelBuilder.Entity<EventoToken>()
+                .HasIndex(e => new { e.tokenHash, e.isRevogado });
+
         }
     }
 
