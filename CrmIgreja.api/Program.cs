@@ -5,6 +5,7 @@ using CrmIgreja.api.Extensions;
 using CrmIgreja.api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.IdentityModel.Tokens;
@@ -415,6 +416,31 @@ app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] 
         Token = eventToken
     });
 
+})
+.RequireAuthorization();
+
+
+app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, ApplicationDbContext db) =>
+{
+    var userId = userLogado.GetUserId;
+
+    var eventToken = await db.EventoToken.FirstOrDefaultAsync(e => e.tokenHash == req.eventToken);
+
+    if (eventToken == null) 
+    {
+        return Results.NotFound(new { Erro = "Evento não encontrado" });
+    }
+    else if(eventToken.ExpiraEm < DateTimeOffset.UtcNow) 
+    {
+        throw new ArgumentException("Período para presença no evento expirado");
+    }
+    else if(eventToken.isRevogado) 
+    {
+        throw new ArgumentException("Evento expirado");
+    }
+    
+    // var ChekinJaRealizado = db.Checkin
+    
 })
 .RequireAuthorization();
 

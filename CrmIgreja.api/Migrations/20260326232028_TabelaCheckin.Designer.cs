@@ -3,6 +3,7 @@ using System;
 using CrmIgreja.api.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CrmIgreja.api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326232028_TabelaCheckin")]
+    partial class TabelaCheckin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,28 +24,6 @@ namespace CrmIgreja.api.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("CrmIgreja.api.Models.CheckIn", b =>
-                {
-                    b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
-
-                    b.Property<DateTimeOffset>("dataHora")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("eventId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("membroId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("id");
-
-                    b.ToTable("CheckIns");
-                });
 
             modelBuilder.Entity("CrmIgreja.api.Models.Evento", b =>
                 {

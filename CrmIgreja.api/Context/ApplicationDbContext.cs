@@ -14,6 +14,8 @@ namespace CrmIgreja.api.Context
         public DbSet<Evento> Evento { get; set; }
 
         public DbSet<EventoToken> EventoToken {get; set;}
+        
+        public DbSet<CheckIn> CheckIns { get; set; }
 
         //Constraints para as tabelas
         protected override void OnModelCreating(ModelBuilder modelBuilder)
