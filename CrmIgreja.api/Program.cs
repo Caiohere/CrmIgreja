@@ -5,6 +5,7 @@ using CrmIgreja.api.Extensions;
 using CrmIgreja.api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.UserSecrets;
@@ -419,10 +420,9 @@ app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] 
 })
 .RequireAuthorization();
 
-
 app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, ApplicationDbContext db) =>
 {
-    var userId = userLogado.GetUserId;
+    var userId = userLogado.GetUserId();
 
     var eventToken = await db.EventoToken.FirstOrDefaultAsync(e => e.tokenHash == req.eventToken);
 
@@ -430,17 +430,38 @@ app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, A
     {
         return Results.NotFound(new { Erro = "Evento não encontrado" });
     }
+    else if (eventToken.isRevogado)
+    {
+        throw new ArgumentException("Período para presença no evento expirado, o checkin está bloqueado");
+    }
     else if(eventToken.ExpiraEm < DateTimeOffset.UtcNow) 
     {
+        eventToken.isRevogado = true;
+        await db.SaveChangesAsync();
+
         throw new ArgumentException("Período para presença no evento expirado");
     }
-    else if(eventToken.isRevogado) 
+ 
+
+    var ChekinJaRealizado = await db.CheckIns.AnyAsync(c => c.eventId == eventToken.eventoId && c.userId == userId);
+
+    if (ChekinJaRealizado) 
     {
-        throw new ArgumentException("Evento expirado");
+        throw new ArgumentException("Chekin já realizado pelo usuário");
     }
-    
-    // var ChekinJaRealizado = db.Checkin
-    
+
+    var novoCheckin = new CheckIn
+    {
+        eventId = eventToken.eventoId,
+        userId = userId,
+        dataHora = DateTimeOffset.UtcNow
+
+    };
+
+    db.CheckIns.Add(novoCheckin);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(novoCheckin);
 })
 .RequireAuthorization();
 
