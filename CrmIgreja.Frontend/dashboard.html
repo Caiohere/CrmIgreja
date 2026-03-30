@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CrmIgreja - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <header>
+      <h1>Eventos</h1>
+      <button onclick="logout()" class="header-btn">Sair</button>
+    </header>
+
+    <main>
+      <div id="feedbackMsg" class="alert d-none"></div>
+
+      <!-- Events List View -->
+      <div id="view-list">
+        <div class="flex-between mb-2">
+            <h2 style="font-size: 1.2rem;">Próximos Eventos</h2>
+            <button onclick="window.location.href='checkin.html'" class="btn btn-outline btn-sm">Check-in</button>
+        </div>
+        <div id="events-container">
+            <p style="text-align: center; color: var(--text-light); margin-top: 2rem;">Carregando eventos...</p>
+        </div>
+
+        <!-- Floating Action Button -->
+        <button onclick="toggleView()" class="fab" title="Criar Evento">+</button>
+      </div>
+
+      <!-- Create Event View (hidden by default) -->
+      <div id="view-create" class="card d-none">
+        <h2 class="card-title mb-2">Criar Novo Evento</h2>
+        
+        <form id="form-create">
+          <div class="form-group">
+            <label>Nome do Evento</label>
+            <input type="text" id="ev-nome" required placeholder="Ex: Culto de Domingo">
+          </div>
+          <div class="form-group">
+            <label>Descrição</label>
+            <input type="text" id="ev-desc" required placeholder="Detalhes...">
+          </div>
+          <div class="form-group">
+            <label>Início (Data e Hora)</label>
+            <input type="datetime-local" id="ev-inicio" required>
+          </div>
+          <div class="form-group">
+            <label>Término (Data e Hora)</label>
+            <input type="datetime-local" id="ev-termino" required>
+          </div>
+          <div class="flex-gap mt-3">
+            <button type="button" class="btn btn-outline" onclick="toggleView()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+      
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

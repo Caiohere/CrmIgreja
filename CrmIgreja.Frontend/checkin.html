@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CrmIgreja - Check-in</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- html5-qrcode library -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <header>
+      <button onclick="window.location.href='dashboard.html'" class="header-btn">&larr; Voltar</button>
+      <h1>Check-in</h1>
+      <div></div>
+    </header>
+
+    <main>
+      <div id="feedbackMsg" class="alert d-none"></div>
+
+      <div class="card mb-2" id="scanner-card">
+        <h2 class="card-title text-center mb-1">Escanear QR Code</h2>
+        <p class="card-subtitle text-center mb-2">Aponte a câmera para o evento</p>
+        
+        <div id="reader" style="width: 100%; border-radius:12px; overflow:hidden;"></div>
+        
+        <div class="text-center mt-2">
+            <button id="btn-scan" class="btn btn-primary">Ativar Câmera</button>
+            <button id="btn-stop" class="btn btn-outline d-none mt-1">Parar Câmera</button>
+        </div>
+      </div>
+
+      <div class="card mt-2">
+        <h3 class="card-title text-center mb-1">Código Manual</h3>
+        <p class="card-subtitle text-center mb-2">Se preferir, digite o Token</p>
+        <form id="form-checkin">
+          <div class="form-group">
+            <input type="text" id="manual-token" required placeholder="Token gerado pelo Admin">
+          </div>
+          <button type="submit" class="btn btn-outline">Confirmar Presença</button>
+        </form>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="checkin.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ using CrmIgreja.api.Extensions;
 using CrmIgreja.api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,15 @@ var builder = WebApplication.CreateBuilder(args);
 // =====================================================================
 // 1. SERVICES
 // =====================================================================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddProblemDetails();
@@ -30,7 +40,7 @@ builder.Services.AddExceptionHandler<CrmIgreja.api.Exceptions.GlobalExceptionHan
 
 builder.Services.AddSwaggerGen(c =>
 {
-    // Define a regra de seguranÁa (O Cadeado)
+    // Define a regra de seguran√ßa (O Cadeado)
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -105,13 +115,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 
-app.UseAuthentication(); // LÍ JWT
+app.UseAuthentication(); // L√™ JWT
 app.UseAuthorization(); 
 
 // =====================================================================
-// 3. NOSSAS ROTAS
+// 3. MIDDLEWARE DE ARQUIVOS EST√ÅTICOS (FRONTEND)
+// =====================================================================
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "..", "CrmIgreja.Frontend")),
+    RequestPath = "" // Acessivel na raiz da API ex: localhost:7131/index.html
+});
+
+// =====================================================================
+// 4. NOSSAS ROTAS
 // =====================================================================
 
 // Rota de Registro
@@ -119,7 +140,7 @@ app.MapPost("/auth/register", async (RegisterRequest req, ApplicationDbContext d
 {
     if ((req.senha.Length < 8) || (!req.senha.Any(char.IsDigit)) || (!req.senha.Any(char.IsPunctuation)))
     {
-        throw new BadHttpRequestException("A senha precisa ter 8 digitos, contendo ao menos um n˙mero e caracter especial");
+        throw new BadHttpRequestException("A senha precisa ter 8 digitos, contendo ao menos um n√∫mero e caracter especial");
     }
     using var transaction = await db.Database.BeginTransactionAsync();
         
@@ -157,10 +178,10 @@ app.MapPost("/auth/register", async (RegisterRequest req, ApplicationDbContext d
         //Verifica se o erro foi de email duplicado
         if (ex.InnerException?.Message.Contains("23505") == true || ex.InnerException?.Message.Contains("Unique") == true)
         {
-            throw new EmailDuplicadoException("Este email j· est· cadastrado no sistema.");
+            throw new EmailDuplicadoException("Este email j√° est√° cadastrado no sistema.");
         }
 
-        throw new BadHttpRequestException("N„o foi possÌvel registrar o usu·rio.");
+        throw new BadHttpRequestException("N√£o foi poss√≠vel registrar o usu√°rio.");
     }
 })
 .WithName("RegisterUser");
@@ -282,21 +303,22 @@ app.MapPost("auth/logout", async (ClaimsPrincipal userLogado, ApplicationDbConte
     membro.Usuario.refreshTokenExpiryTime = null;
     await db.SaveChangesAsync();
 
-    return Results.Ok(new { Mensagem = "Logout realizado com sucesso. Sess„o encerrada! " });
+    return Results.Ok(new { Mensagem = "Logout realizado com sucesso. Sess√£o encerrada! " });
 })
 .RequireAuthorization();
 
-app.MapPost("evento", async (CriarEventoRequest req, ApplicationDbContext db) =>
+// Rotas de Evento
+app.MapPost("evento", [Authorize(Roles = "Admin")] async (CriarEventoRequest req, ApplicationDbContext db) =>
 {
 
     if (req.dataInicio < DateTimeOffset.UtcNow) 
     {
-        throw new ArgumentException("N„o È possÌvel criar um agendamento em data passada");
+        throw new ArgumentException("N√£o √© poss√≠vel criar um agendamento em data passada");
     }
 
     if (req.dataFim < req.dataInicio) 
     {
-        throw new ArgumentException("Data final n„o pode ser menor que data inicial");
+        throw new ArgumentException("Data final n√£o pode ser menor que data inicial");
     }
 
     var novoEvento = new Evento
@@ -311,7 +333,8 @@ app.MapPost("evento", async (CriarEventoRequest req, ApplicationDbContext db) =>
     await db.SaveChangesAsync();
 
     return Results.Created($"/eventos/{novoEvento.id}", novoEvento);
-});
+}
+).RequireAuthorization();
 
 app.MapGet("eventos", async (DateTimeOffset? dataInicio, DateTimeOffset? dataFim, ApplicationDbContext db) => 
 {
@@ -344,7 +367,7 @@ app.MapDelete("/evento/{id}", [Authorize(Roles = "Admin")] async(int id, Applica
 
     if (linhasAfetadas == 0)
     {
-        return Results.NotFound(new {Erro = "Registro n„o encontrado"});
+        return Results.NotFound(new {Erro = "Registro n√£o encontrado"});
     }
 
     return Results.NoContent();
@@ -357,7 +380,7 @@ app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] 
     var existeEvento = await db.Evento.AnyAsync(e => e.id == eventId);
     if (!existeEvento)
     {
-        return Results.NotFound(new { Erro = "Evento n„o encontrado para gerar o token" });
+        return Results.NotFound(new { Erro = "Evento n√£o encontrado para gerar o token" });
     }
 
     var existeToken = await db.EventoToken.FirstOrDefaultAsync(t => t.eventoId == eventId);
@@ -382,7 +405,7 @@ app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] 
     var eventToken = Convert.ToBase64String(randomNumber);
 
     
-    if (existeToken != null && existeToken.isRevogado) // est· inv·lido, cria um novo
+    if (existeToken != null && existeToken.isRevogado) // est√° inv√°lido, cria um novo
     {
         existeToken.CriadoEm = DateTimeOffset.UtcNow;
         existeToken.ExpiraEm = DateTimeOffset.UtcNow.AddMinutes(15);
@@ -420,6 +443,7 @@ app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] 
 })
 .RequireAuthorization();
 
+// Rotas de Checkin
 app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, ApplicationDbContext db) =>
 {
     var userId = userLogado.GetUserId();
@@ -428,18 +452,18 @@ app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, A
 
     if (eventToken == null) 
     {
-        return Results.NotFound(new { Erro = "Evento n„o encontrado" });
+        return Results.NotFound(new { Erro = "Evento n√£o encontrado" });
     }
     else if (eventToken.isRevogado)
     {
-        throw new ArgumentException("PerÌodo para presenÁa no evento expirado, o checkin est· bloqueado");
+        throw new ArgumentException("Per√≠odo para presen√ßa no evento expirado, o checkin est√° bloqueado");
     }
     else if(eventToken.ExpiraEm < DateTimeOffset.UtcNow) 
     {
         eventToken.isRevogado = true;
         await db.SaveChangesAsync();
 
-        throw new ArgumentException("PerÌodo para presenÁa no evento expirado");
+        throw new ArgumentException("Per√≠odo para presen√ßa no evento expirado");
     }
  
 
@@ -447,7 +471,7 @@ app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, A
 
     if (ChekinJaRealizado) 
     {
-        throw new ArgumentException("Chekin j· realizado pelo usu·rio");
+        throw new ArgumentException("Chekin j√° realizado pelo usu√°rio");
     }
 
     var novoCheckin = new CheckIn
@@ -462,6 +486,38 @@ app.MapPost("checkins", async (ClaimsPrincipal userLogado, CheckinRequest req, A
     await db.SaveChangesAsync();
 
     return Results.Ok(novoCheckin);
+})
+.RequireAuthorization();
+
+// Rotas de Usu√°rios
+app.MapGet("usuarios", [Authorize(Roles = "Admin")] async(int quantidade, ApplicationDbContext db) =>
+{
+    var query = db.Usuarios.AsQueryable();
+
+    var usuarios = await query
+    .OrderBy(u => u.id)
+    .Take(quantidade)
+    .ToListAsync();
+
+    return Results.Ok(usuarios);
+    
+})
+.RequireAuthorization();
+
+app.MapPost("usuario/{id}/permissoes", [Authorize(Roles = "Admin")] async (int id, bool isAdmin, ApplicationDbContext db) => 
+{
+    var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.id == id);
+
+    if (usuario == null) 
+    {
+        return Results.NotFound("Usu√°rio n√£o encontrado");
+    }
+
+    usuario.isAdmin = isAdmin;
+    await db.SaveChangesAsync();
+
+    Results.Ok("Pemiss√£o atualizada com sucesso");
+    
 })
 .RequireAuthorization();
 
