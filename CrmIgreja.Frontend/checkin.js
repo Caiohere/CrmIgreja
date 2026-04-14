@@ -3,12 +3,7 @@ if (!TokenService.getAccessToken()) {
   window.location.href = 'index.html';
 }
 
-function showMessage(msg, isError = false) {
-  const el = document.getElementById('feedbackMsg');
-  el.textContent = msg;
-  el.className = `alert ${isError ? 'alert-error' : 'alert-success'}`;
-  el.classList.remove('d-none');
-}
+// Removes showMessage
 
 // Scanner variables
 let html5QrcodeScanner = null;
@@ -35,10 +30,10 @@ function startScanner() {
         isScanning = true;
         document.getElementById('btn-scan').classList.add('d-none');
         document.getElementById('btn-stop').classList.remove('d-none');
-        showMessage('Câmera ativada!', false);
+        AppToast.show('Câmera ativada!', 'success');
     })
     .catch(err => {
-        showMessage('Por favor, permita o uso da câmera.', true);
+        AppToast.show('Por favor, permita o uso da câmera.', 'error');
         console.error("Camera falhou:", err);
     });
 }
@@ -56,7 +51,7 @@ function stopScanner() {
 // Callback quando o QR Code é lido com Sucesso
 function onScanSuccess(decodedText, decodedResult) {
   stopScanner();
-  showMessage('QR Code detectado. Processando check-in...', false);
+  AppToast.show('QR Code detectado. Processando check-in...', 'success');
   efetuarCheckin(decodedText);
 }
 
@@ -75,12 +70,12 @@ async function efetuarCheckin(eventToken) {
         });
         
         if (res.ok) {
-            showMessage('Presença confirmada com sucesso! Você pode fechar esta tela e curtir o evento.', false);
+            document.getElementById('checkin-success-modal').classList.remove('d-none');
         } else {
-            const data = await res.text();
-            showMessage('Falha no Check-in: O token é inválido, ou você já fez check-in.', true);
+            const errTxt = await extractError(res);
+            AppToast.show('Falha no Check-in: ' + errTxt, 'error');
         }
     } catch(err) {
-        showMessage('Erro ao processar check-in.', true);
+        AppToast.show('Erro ao processar check-in.', 'error');
     }
 }

@@ -193,13 +193,13 @@ app.MapPost("auth/login", async (LoginRequest req, ApplicationDbContext db, ICon
     .FirstOrDefaultAsync(m => m.email == req.email);
 
     if (membro == null || membro.Usuario == null)
-        throw new UnauthorizedAccessException();
+        return Results.Problem(detail: "E-mail ou senha incorretos.", statusCode: 401);
 
     var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Usuario>();
     var resultado = hasher.VerifyHashedPassword(membro.Usuario, membro.Usuario.senhaHash, req.senha);
 
     if (resultado == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
-        throw new UnauthorizedAccessException();
+        return Results.Problem(detail: "E-mail ou senha incorretos.", statusCode: 401);
 
     var tokenHandler = new JwtSecurityTokenHandler();
     var keyBytes = Encoding.UTF8.GetBytes(config["Jwt:Key"]!);
@@ -313,7 +313,7 @@ app.MapPost("evento", [Authorize(Roles = "Admin")] async (CriarEventoRequest req
 
     if (req.dataInicio < DateTimeOffset.UtcNow) 
     {
-        throw new ArgumentException("Não é possível criar um agendamento em data passada");
+        throw new ArgumentException($"Não é possível criar um agendamento em data passada. {DateTimeOffset.UtcNow} {req.dataInicio}");
     }
 
     if (req.dataFim < req.dataInicio) 
@@ -377,8 +377,8 @@ app.MapDelete("/evento/{id}", [Authorize(Roles = "Admin")] async(int id, Applica
 
 app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] async (int eventId, ApplicationDbContext db) =>
 {
-    var existeEvento = await db.Evento.AnyAsync(e => e.id == eventId);
-    if (!existeEvento)
+    var existeEvento = await db.Evento.FirstOrDefaultAsync(e => e.id == eventId);
+    if (existeEvento is null)
     {
         return Results.NotFound(new { Erro = "Evento não encontrado para gerar o token" });
     }
@@ -420,10 +420,11 @@ app.MapPost("/eventos/{eventId}/createEventToken", [Authorize(Roles = "Admin")] 
             Token = eventToken
         });
     }
-    
+
     var novoEventToken = new EventoToken
     {
         eventoId = eventId,
+        evento = existeEvento,
         CriadoEm = DateTimeOffset.UtcNow,
         ExpiraEm = DateTimeOffset.UtcNow.AddMinutes(15),
         tokenHash = eventToken,
@@ -516,7 +517,7 @@ app.MapPost("usuario/{id}/permissoes", [Authorize(Roles = "Admin")] async (int i
     usuario.isAdmin = isAdmin;
     await db.SaveChangesAsync();
 
-    Results.Ok("Pemissão atualizada com sucesso");
+    return Results.Ok("Pemissão atualizada com sucesso");
     
 })
 .RequireAuthorization();

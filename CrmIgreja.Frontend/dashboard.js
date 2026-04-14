@@ -3,19 +3,7 @@ if (!TokenService.getAccessToken()) {
   window.location.href = 'index.html';
 }
 
-function showMessage(msg, isError = false) {
-  const el = document.getElementById('feedbackMsg');
-  el.textContent = msg;
-  el.className = `alert ${isError ? 'alert-error' : 'alert-success'}`;
-  el.classList.remove('d-none');
-}
-
-function hideMessage() {
-  document.getElementById('feedbackMsg').classList.add('d-none');
-}
-
 function toggleView() {
-  hideMessage();
   document.getElementById('view-list').classList.toggle('d-none');
   document.getElementById('view-create').classList.toggle('d-none');
 }
@@ -61,7 +49,6 @@ async function loadEvents() {
 // Create new event
 document.getElementById('form-create').addEventListener('submit', async (e) => {
   e.preventDefault();
-  hideMessage();
   const btn = e.target.querySelector('button[type="submit"]');
   btn.innerText = 'Salvando...';
 
@@ -79,15 +66,16 @@ document.getElementById('form-create').addEventListener('submit', async (e) => {
     });
 
     if (res.ok) {
-      showMessage('Evento criado com sucesso!');
+      AppToast.show('Evento criado com sucesso!');
       e.target.reset();
       toggleView();
       loadEvents();
     } else {
-      alert('Apenas admins podem criar eventos');
+      const errResponse = await extractError(res);
+      AppToast.show('Falha: ' + errResponse, 'error');
     }
   } catch (err) {
-    alert('Falha na comunicação.');
+    AppToast.show('Falha na comunicação com o servidor.', 'error');
   } finally {
     btn.innerText = 'Salvar';
   }
@@ -96,14 +84,62 @@ document.getElementById('form-create').addEventListener('submit', async (e) => {
 async function gerarCodigo(eventId) {
   try {
     const res = await fetchAPI(`/eventos/${eventId}/createEventToken`, { method: 'POST' });
-    const data = await res.json();
     if (res.ok) {
-      alert(`Token do Evento (QR Code Manual):\n\n${data.token}\n\nMostre para o check-in!`);
+      const data = await res.json();
+      showQrModal(data.token);
     } else {
-      alert('Apenas admins podem gerar código ou: ' + data.Erro);
+      const errTxt = await extractError(res);
+      AppToast.show(errTxt, 'error');
     }
   } catch (err) {
-    alert('Erro ao gerar código');
+    AppToast.show('Erro de rede ao gerar código', 'error');
+  }
+}
+
+let qrCodeInstance = null;
+
+function showQrModal(tokenStr) {
+  const box = document.getElementById('qrcode-box');
+  box.innerHTML = ''; // Limpa anterior
+  
+  qrCodeInstance = new QRCode(box, {
+      text: tokenStr,
+      width: 250,
+      height: 250,
+      colorDark : "#000000",
+      colorLight : "#ffffff",
+      correctLevel : QRCode.CorrectLevel.H
+  });
+
+  document.getElementById('qr-modal').classList.remove('d-none');
+}
+
+function closeQrModal() {
+  document.getElementById('qr-modal').classList.add('d-none');
+}
+
+function downloadQrCode() {
+  const box = document.getElementById('qrcode-box');
+  const img = box.querySelector('img');
+  const canvas = box.querySelector('canvas');
+  let dataUrl = '';
+  
+  if (img && img.src && img.src.startsWith('data:image')) {
+      dataUrl = img.src;
+  } else if (canvas) {
+      dataUrl = canvas.toDataURL("image/png");
+  }
+
+  if (dataUrl) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'QR_Code_Checkin.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      AppToast.show('Download iniciado!', 'success');
+  } else {
+      AppToast.show('Aguarde o QR Code carregar antes de baixar.', 'error');
   }
 }
 
@@ -112,12 +148,14 @@ async function deleteEvento(eventId) {
   try {
     const res = await fetchAPI(`/evento/${eventId}`, { method: 'DELETE' });
     if (res.ok || res.status === 204) {
+      AppToast.show('Evento excluído com sucesso.');
       loadEvents();
     } else {
-      alert('Falha (Apenas Admins podem apagar)');
+      const errTxt = await extractError(res);
+      AppToast.show(errTxt, 'error');
     }
   } catch (err) {
-    alert('Erro');
+    AppToast.show('Falha ao tentar excluir evento', 'error');
   }
 }
 

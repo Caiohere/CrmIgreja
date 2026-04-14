@@ -62,6 +62,21 @@
     </main>
   </div>
 
+  <div id="qr-modal" class="modal d-none">
+    <div class="modal-content card">
+      <h3 class="mb-2" style="text-align: center;">QR Code do Evento</h3>
+      <div id="qrcode-box" class="qr-box mb-2"></div>
+      <p class="mb-3" style="font-size: 0.9rem; color: var(--text-light); text-align: center;">
+        Este é o QR Code de presença. Mostre na recepção ou baixe para impressão.
+      </p>
+      <div class="flex-gap">
+        <button onclick="closeQrModal()" class="btn btn-outline" style="flex:1;">Fechar</button>
+        <button onclick="downloadQrCode()" class="btn btn-primary" style="flex:1;">📥 Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="api.js"></script>
   <script src="dashboard.js"></script>
 </body>

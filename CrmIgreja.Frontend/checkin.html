@@ -46,6 +46,18 @@
     </main>
   </div>
 
+  <!-- Modal de Sucesso Check-in -->
+  <div id="checkin-success-modal" class="modal d-none">
+    <div class="modal-content card" style="text-align: center; padding: 2.5rem 1.5rem;">
+      <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+      <h2 class="mb-2" style="color: var(--success-color); font-size: 1.5rem;">Check-in Confirmado!</h2>
+      <p class="mb-3" style="color: var(--text-light); line-height: 1.4;">
+        Sua presença foi confirmada com sucesso.<br>Aproveite o evento!
+      </p>
+      <button onclick="document.getElementById('checkin-success-modal').classList.add('d-none'); window.location.href='dashboard.html'" class="btn btn-primary" style="width: 100%;">Ir para o Dashboard</button>
+    </div>
+  </div>
+
   <script src="api.js"></script>
   <script src="checkin.js"></script>
 </body>

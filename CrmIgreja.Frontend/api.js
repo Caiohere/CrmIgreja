@@ -63,3 +63,58 @@ async function fetchAPI(endpoint, options = {}) {
 
   return response;
 }
+
+// ========================================================
+// UTILS GLOBAIS DE INTERFACE (NOTIFICAÇÃO + ERROS)
+// ========================================================
+
+/**
+ * Lê o retorno da API. Se for um ProblemDetails (JSON com `detail` ou `title`), 
+ * extrai apenas a mensagem amigável para o usuário, ignorando campos de infraestrutura.
+ */
+async function extractError(res) {
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    // Tenta pegar o detalhe literal do erro, se não existir, pega o titulo.
+    return json.detail || json.title || json.message || json.Erro || "Erro desconhecido ao comunicar com a API.";
+  } catch(e) {
+    // Se não for JSON (ex. um erro de servidor puro / texto literal)
+    return text || "Ocorreu uma falha na requisição.";
+  }
+}
+
+/**
+ * Cria Notificações Flutuantes e Elegantes (Toasts) em vez de window.alert()
+ */
+const AppToast = {
+  container: null,
+  init() {
+    if (!document.getElementById('toast-container')) {
+      this.container = document.createElement('div');
+      this.container.id = 'toast-container';
+      document.body.appendChild(this.container);
+    } else {
+      this.container = document.getElementById('toast-container');
+    }
+  },
+  show(msg, type = 'success') {
+    this.init();
+    
+    // Remove qualquer toast existente para que só exista um visível por vez
+    this.container.innerHTML = '';
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = type === 'error' ? `⚠️ ${msg}` : `✅ ${msg}`;
+    
+    this.container.appendChild(toast);
+
+    setTimeout(() => {
+      if (this.container.contains(toast)) {
+        toast.classList.add('fade-out');
+        toast.addEventListener('animationend', () => toast.remove());
+      }
+    }, 4500);
+  }
+};
