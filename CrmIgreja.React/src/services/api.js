@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://localhost:5242'; // Replace with actual API base url if different
+export const API_BASE_URL = 'https://apis.canadacentral.cloudapp.azure.com/crm'; // API em Produção
 
 export const TokenService = {
   setTokens(accessToken, refreshToken) {
