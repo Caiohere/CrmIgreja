@@ -1,31 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TokenService } from '../services/api';
+import React, { createContext, useContext } from 'react';
 
+// Versão de demonstração: sem login, o usuário está sempre autenticado.
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const token = TokenService.getAccessToken();
-    setIsAuthenticated(!!token);
-  }, []);
-
-  const login = (accessToken, refreshToken) => {
-    TokenService.setTokens(accessToken, refreshToken);
-    setIsAuthenticated(true);
-  };
-
-  const logout = () => {
-    TokenService.clearTokens();
-    setIsAuthenticated(false);
-  };
-
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = { isAuthenticated: true, login: () => {}, logout: () => {} };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

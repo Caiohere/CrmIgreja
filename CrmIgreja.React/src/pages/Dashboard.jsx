@@ -130,7 +130,7 @@ export default function Dashboard() {
     <div className="app-container">
       <header>
         <h1>Eventos</h1>
-        <button onClick={logout} className="header-btn">Sair</button>
+        <div></div>
       </header>
 
       <main>
@@ -204,6 +204,9 @@ export default function Dashboard() {
             </div>
             <p className="mb-3" style={{ fontSize: '0.9rem', color: 'var(--text-light)', textAlign: 'center' }}>
               Este é o QR Code de presença. Mostre na recepção ou baixe para impressão.
+            </p>
+            <p className="mb-3" style={{ fontSize: '0.75rem', wordBreak: 'break-all', textAlign: 'center', userSelect: 'all', fontFamily: 'monospace' }}>
+              {qrToken}
             </p>
             <div className="flex-gap">
               <button onClick={() => setQrToken(null)} className="btn btn-outline" style={{ flex: 1 }}>Fechar</button>
